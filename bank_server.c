@@ -172,12 +172,39 @@ int debit(struct user* new_user, int amount){
 	fprintf(new_fptr, "\n%d", amount);
 	fclose(fptr);
 	fclose(new_fptr);
-	rename("temp.txt", file_name);
+	if(rename("database/temp.txt", file_name) == 1)
+		printf("rename success\n");
 	return 1;
 }
 
 void credit(struct user* new_user, int amount){
-
+	FILE *fptr, *new_fptr;
+	char file_name[270] = "database/";
+	char type_of_transaction[250];
+	strcat(file_name, new_user->username);
+	strcat(file_name, ".txt");
+	if ((fptr = fopen(file_name,"r")) == NULL){
+    	printf("Error! opening file");
+    	return;
+	}
+	if ((new_fptr = fopen("database/temp.txt","w")) == NULL){
+    	printf("Error! opening file");
+    	return;
+	}
+	int balance;
+	fscanf(fptr,"%d", &balance);
+	fprintf(new_fptr, "%d\n", balance+amount);
+	while(fscanf(fptr,"%s", type_of_transaction) != EOF){
+		fprintf(new_fptr, "%s\n", type_of_transaction);
+		fscanf(fptr,"%d", &balance);
+		fprintf(new_fptr, "%d\n", balance);
+	}
+	fprintf(new_fptr, "%s", CREDIT);
+	fprintf(new_fptr, "\n%d", amount);
+	fclose(fptr);
+	fclose(new_fptr);
+	rename("database/temp.txt", file_name);
+	return;
 }
 void admin_panel(){
 	char buffer[250];
@@ -204,7 +231,7 @@ void admin_panel(){
 			if(debit(new_user, amount) == 1)
 				printf("Amount has been successfully debited to your account!\n");
 			else
-				printf("Transaction failed due to insufficient balance");
+				printf("Transaction failed due to insufficient balance\n");
 			print_balance(new_user);
 			free(new_user);
 		}else if(strcmp(buffer, CREDIT) == 0){
