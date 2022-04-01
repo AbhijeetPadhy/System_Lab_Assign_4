@@ -1,0 +1,12 @@
+bank001 user@001 C
+bank002 user@002 C
+bank003 user@003 C
+bank004 user@004 C
+bank005 user@005 C
+bank006 user@006 C
+bank007 user@007 C
+bank008 user@008 C
+bank009 user@009 C
+bank010 user@010 C
+admin01 admin@01 A
+police0 police@0 P
