@@ -19,18 +19,28 @@ struct user{
 	char type_of_user[2];
 };
 
-void send_data(char buffer[1000]){
-	printf("%s", buffer);
+char print_data[1000] = "";
+
+void print(char data[1000]){
+	strcat(print_data, data);
+}
+
+void send_data(){
+	printf("%s", print_data);
 }
 
 void receive_data(char buffer[1000]){
+	send_data();
 	scanf("%s", buffer);
+	print_data[0] = '\0';
 }
 
 void receive_integer(int *data){
+	send_data();
 	char buffer[1000];
 	scanf("%s", buffer);
 	sscanf(buffer, "%d", data);
+	print_data[0] = '\0';
 }
 
 struct user* validate(char username[250], char password[250]){
@@ -42,7 +52,7 @@ struct user* validate(char username[250], char password[250]){
 	struct user *new_user;
 
 	if ((fptr = fopen("database/login_file.txt","r")) == NULL){
-    	printf("Error! opening file");
+    	print("Error! opening file");
     	return NULL;
 	}
 	while(fscanf(fptr,"%s", line) != EOF){
@@ -78,12 +88,12 @@ struct user * user_authenticate(){
 	char username[250];
 	char password[250];
 	for(int i=0;i<3;i++){
-		printf("\n------------------------- User Authentication -------------------------\n\n");
-		printf("username: ");
-		scanf("%s", username);
+		print("\n------------------------- User Authentication -------------------------\n\n");
+		print("username: ");
+		receive_data(username);
 		fflush(stdin);
-		printf("password: ");
-		scanf("%s", password);
+		print("password: ");
+		receive_data(password);
 		fflush(stdin);
 		struct user *new_user = validate(username, password);
 		if(new_user != NULL)
@@ -96,25 +106,24 @@ int quit_server(){
 	return 0;
 }
 
-void print_balance(struct user* new_user, char extras[1000]){
+void print_balance(struct user* new_user){
 	FILE *fptr;
 	char file_name[270] = "database/";
 	char print_data[1000] = "";
-	strcat(print_data, extras);
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
-    	printf("Error! opening file");
+    	print("Error! opening file");
     	return;
 	}
 	int balance;
 	fscanf(fptr,"%d", &balance);
-	strcat(print_data, "----------------------------------\n");
+	print("----------------------------------\n");
 	char formatted_string[1000] = "";
 	sprintf(formatted_string, "Available Balance: %d\n", balance);
-	strcat(print_data, formatted_string);
-	strcat(print_data, "----------------------------------\n");
-	send_data(print_data);
+	print(formatted_string);
+	print("----------------------------------\n");
+	//send_data(print_data);
 	fclose(fptr);
 }
 
@@ -124,39 +133,42 @@ void mini_statement(struct user* new_user){
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
-    	printf("Error: User account does not exist!");
+    	print("Error: User account does not exist!");
     	return;
 	}
 	int balance;
 	fscanf(fptr,"%d", &balance);
-	printf("\n\n------------------------- MINI STATEMENT -------------------------\n\n");
-	printf("\t\t|----------------------------------\n");
-	printf("\t\t|User: %s \t Available Balance: %d\n", new_user->username, balance);
-	printf("\t\t|----------------------------------\n");
+	print("\n\n------------------------- MINI STATEMENT -------------------------\n\n");
+	print("\t\t|----------------------------------\n");
+	char formatted_string[1000] = "";
+	sprintf(formatted_string, "\t\t|User: %s \t Available Balance: %d\n", new_user->username, balance);
+	print(formatted_string);
+	print("\t\t|----------------------------------\n");
 	char type_of_transaction[250];
 	int amount;
 	while(fscanf(fptr,"%s", type_of_transaction) != EOF){
 		fscanf(fptr,"%d", &amount);
-		printf("\t\t|%s:%d\n", type_of_transaction, amount);
+		sprintf(formatted_string, "\t\t|%s:%d\n", type_of_transaction, amount);
+		print(formatted_string);
 	}
-	printf("\t\t|----------------------------------\n");
+	print("\t\t|----------------------------------\n");
 	fclose(fptr);
 }
 
 void customer_panel(struct user* new_user){
 	char buffer[250];
 	do{
-		printf("\n\n-------------------------Customer Panel-------------------------\n");
-		printf("Available commands\n");
-		printf("------------------\n");
-		printf("1. BAL\n");
-		printf("2. STMT\n");
-		printf("3. QUIT\n");
-		printf("Enter the command: ");
-		scanf("%s", buffer);
+		print("\n\n-------------------------Customer Panel-------------------------\n");
+		print("Available commands\n");
+		print("------------------\n");
+		print("1. BAL\n");
+		print("2. STMT\n");
+		print("3. QUIT\n");
+		print("Enter the command: ");
+		receive_data(buffer);
 
 		if(strcmp(buffer, BALANCE) == 0){
-			print_balance(new_user, "");
+			print_balance(new_user);
 		}else if(strcmp(buffer, MINI_STATEMENT) == 0){
 			mini_statement(new_user);
 		}
@@ -170,11 +182,11 @@ int debit(struct user* new_user, int amount){
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
-    	printf("Error! opening file");
+    	print("Error! opening file");
     	return -1;
 	}
 	if ((new_fptr = fopen("database/temp.txt","w")) == NULL){
-    	printf("Error! opening file");
+    	print("Error! opening file");
     	return -1;
 	}
 	int balance;
@@ -192,7 +204,7 @@ int debit(struct user* new_user, int amount){
 	fclose(fptr);
 	fclose(new_fptr);
 	if(rename("database/temp.txt", file_name) == 1)
-		printf("rename success\n");
+		print("rename success\n");
 	return 1;
 }
 
@@ -203,11 +215,11 @@ void credit(struct user* new_user, int amount){
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
-    	printf("Error! opening file");
+    	print("Error! opening file");
     	return;
 	}
 	if ((new_fptr = fopen("database/temp.txt","w")) == NULL){
-    	printf("Error! opening file");
+    	print("Error! opening file");
     	return;
 	}
 	int balance;
@@ -230,44 +242,44 @@ void admin_panel(){
 	char username[250];
 	int amount = 0;
 	struct user *new_user = NULL;
-	char print_data[1000] = "Authentication Successfull!";
+	//char print_data[1000] = "Authentication Successfull!";
 	do{
-		strcat(print_data, "\n\n-------------------------Admin Panel-------------------------\n");
-		strcat(print_data, "Available commands\n");
-		strcat(print_data, "------------------\n");
-		strcat(print_data, "1. CREDIT\n");
-		strcat(print_data, "2. DEBIT\n");
-		strcat(print_data, "3. QUIT\n");
-		strcat(print_data, "Enter the command: ");
-		send_data(print_data);
+		print("\n\n-------------------------Admin Panel-------------------------\n");
+		print("Available commands\n");
+		print("------------------\n");
+		print("1. CREDIT\n");
+		print("2. DEBIT\n");
+		print("3. QUIT\n");
+		print("Enter the command: ");
+		//send_data(print_data);
 		receive_data(buffer);
 
 		if(strcmp(buffer, DEBIT) == 0){
-			send_data("Enter username: ");
+			print("Enter username: ");
 			receive_data(username);
 			new_user = (struct user *)malloc(sizeof(struct user));
 			strcpy(new_user->username, username);
-			send_data("Enter the amount to be debited: ");
+			print("Enter the amount to be debited: ");
 			receive_integer(&amount);
-			print_data[0] = '\0';
+			//print_data[0] = '\0';
 			if(debit(new_user, amount) == 1)
-				strcat(print_data, "Amount has been successfully debited to your account!\n");
+				print("Amount has been successfully debited to your account!\n");
 			else
-				strcat(print_data, "Transaction failed due to insufficient balance\n");
-			print_balance(new_user, print_data);
+				print("Transaction failed due to insufficient balance\n");
+			print_balance(new_user);
 			free(new_user);
 		}else if(strcmp(buffer, CREDIT) == 0){
-			printf("Enter username: ");
-			scanf("%s", username);
+			print("Enter username: ");
+			receive_data(username);
 			new_user = (struct user *)malloc(sizeof(struct user));
 			strcpy(new_user->username, username);
-			printf("Enter the amount to be credited: ");
-			scanf("%d", &amount);
+			print("Enter the amount to be credited: ");
+			receive_integer(&amount);
 			credit(new_user, amount);
-			print_balance(new_user,"");
+			print_balance(new_user);
 			free(new_user);
 		}
-		print_data[0] = '\0';
+		//print_data[0] = '\0';
 	}while(strcmp(buffer, QUIT) != 0);
 }
 
@@ -280,21 +292,20 @@ void police_panel(struct user* new_user){
 	char type_from_file[250] = "";
 	int amount;
 	FILE *fptr;
-	char print_data[1000] = "Authentication Successfull!";
 	do{
-		strcat(print_data, "\n\n-------------------------Police Panel-------------------------\n");
-		strcat(print_data, "Available commands\n");
-		strcat(print_data, "------------------\n");
-		strcat(print_data, "1. BAL(Show Balance of All Customers)\n");
-		strcat(print_data, "2. STMT\n");
-		strcat(print_data, "3. QUIT\n");
-		strcat(print_data, "Enter the command: ");
-		send_data(print_data);
+		print("\n\n-------------------------Police Panel-------------------------\n");
+		print("Available commands\n");
+		print("------------------\n");
+		print("1. BAL(Show Balance of All Customers)\n");
+		print("2. STMT\n");
+		print("3. QUIT\n");
+		print("Enter the command: ");
+		//send_data(print_data);
 		receive_data(buffer);
 
 		if(strcmp(buffer, BALANCE) == 0){
 			if ((fptr = fopen("database/login_file.txt","r")) == NULL){
-		    	printf("Error! opening file");
+		    	print("Error! opening file");
 		    	return;
 			}
 			while(fscanf(fptr,"%s", line) != EOF){
@@ -319,22 +330,23 @@ void police_panel(struct user* new_user){
 				strcat(user_file_name, ".txt");
 
 				if ((fptr2 = fopen(user_file_name,"r")) == NULL){
-			    	printf("Error! opening file");
+			    	print("Error! opening file");
 			    	return;
 				}
 				fscanf(fptr2,"%d", &amount);
-				printf("%s : %d\n", user_from_file, amount);
+				char formatted_string[1000] = "";
+				sprintf(formatted_string, "%s : %d\n", user_from_file, amount);
+				print(formatted_string);
 				fclose(fptr2);
 			}
 			fclose(fptr);
 		}else if(strcmp(buffer, MINI_STATEMENT) == 0){
-			printf("Enter username: ");
-			scanf("%s", username);
+			print("Enter username: ");
+			receive_data(username);
 			struct user* new_user = (struct user*)malloc(sizeof(struct user));
 			strcpy(new_user->username, username);
 			mini_statement(new_user);
 		}
-		print_data[0] = '\0';
 	}while(strcmp(buffer, QUIT) != 0);
 }
 
@@ -348,24 +360,21 @@ void user_panel(struct user* new_user){
 }
 
 int main(){
-	char print_data[1000] = "";
 	char buffer[250];
 	struct user * new_user;
 	do{
-		print_data[0] = '\0';
-		strcat(print_data, "\n------------------------- Banking Dashboard-------------------------\n");
-		strcat(print_data, "Available commands\n");
-		strcat(print_data, "------------------\n");
-		strcat(print_data, "1. LOGIN\n");
-		strcat(print_data, "2. QUIT\n");
-		strcat(print_data, "Enter the command: ");
-		send_data(print_data);
+		print("\n------------------------- Banking Dashboard-------------------------\n");
+		print("Available commands\n");
+		print("------------------\n");
+		print("1. LOGIN\n");
+		print("2. QUIT\n");
+		print("Enter the command: ");
 		receive_data(buffer);
 
 		if(strcmp(buffer, LOGIN) == 0){
 			new_user = user_authenticate();
 			if(new_user != NULL){
-				printf("Auth Successfull!\n");
+				print("Authentication Successfull!\n");
 				user_panel(new_user);
 				free(new_user);
 			}
