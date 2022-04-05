@@ -3,6 +3,11 @@
 #include<string.h>
 #include<stdlib.h>
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 #define QUIT "QUIT"
 #define LOGIN "LOGIN"
 #define CUSTOMER "C"
@@ -20,25 +25,46 @@ struct user{
 };
 
 char print_data[1000] = "";
+int sockfd, newsockfd;
+
+void error(const char *msg){
+    printf("%s",msg);
+    exit(1);
+}
 
 void print(char data[1000]){
 	strcat(print_data, data);
 }
 
 void send_data(){
-	printf("%s", print_data);
+	int n = write(newsockfd, print_data, strlen(print_data));
+	if(n < 0){
+			error("Error on writing.");
+	}
 }
 
 void receive_data(char buffer[1000]){
 	send_data();
-	scanf("%s", buffer);
+	bzero(buffer, 1000);
+	int n = read(newsockfd, buffer, 1000);
+	if(n < 0){
+			error("Error on reading.");
+	}
 	print_data[0] = '\0';
 }
 
 void receive_integer(int *data){
 	send_data();
 	char buffer[1000];
-	scanf("%s", buffer);
+	bzero(buffer, 1000);
+	int n = read(newsockfd, buffer, 1000);
+	if(n < 0){
+			error("Error on reading.");
+	}else{
+		printf("client: %s\n", buffer);
+		int len = strlen(buffer);
+		buffer[len-1] = '\0';
+	}
 	sscanf(buffer, "%d", data);
 	print_data[0] = '\0';
 }
@@ -85,16 +111,14 @@ struct user* validate(char username[250], char password[250]){
 }
 
 struct user * user_authenticate(){
-	char username[250];
-	char password[250];
+	char username[1000];
+	char password[1000];
 	for(int i=0;i<3;i++){
 		print("\n------------------------- User Authentication -------------------------\n\n");
 		print("username: ");
 		receive_data(username);
-		fflush(stdin);
 		print("password: ");
 		receive_data(password);
-		fflush(stdin);
 		struct user *new_user = validate(username, password);
 		if(new_user != NULL)
 			return new_user;
@@ -102,7 +126,10 @@ struct user * user_authenticate(){
 	return NULL;
 }
 
-int quit_server(){
+int quit_client(){
+	print("Bye");
+	send_data();
+	print_data[0] = '\0';
 	return 0;
 }
 
@@ -123,7 +150,6 @@ void print_balance(struct user* new_user){
 	sprintf(formatted_string, "Available Balance: %d\n", balance);
 	print(formatted_string);
 	print("----------------------------------\n");
-	//send_data(print_data);
 	fclose(fptr);
 }
 
@@ -156,7 +182,7 @@ void mini_statement(struct user* new_user){
 }
 
 void customer_panel(struct user* new_user){
-	char buffer[250];
+	char buffer[1000];
 	do{
 		print("\n\n-------------------------Customer Panel-------------------------\n");
 		print("Available commands\n");
@@ -238,11 +264,10 @@ void credit(struct user* new_user, int amount){
 	return;
 }
 void admin_panel(){
-	char buffer[250];
+	char buffer[1000];
 	char username[250];
 	int amount = 0;
 	struct user *new_user = NULL;
-	//char print_data[1000] = "Authentication Successfull!";
 	do{
 		print("\n\n-------------------------Admin Panel-------------------------\n");
 		print("Available commands\n");
@@ -251,7 +276,6 @@ void admin_panel(){
 		print("2. DEBIT\n");
 		print("3. QUIT\n");
 		print("Enter the command: ");
-		//send_data(print_data);
 		receive_data(buffer);
 
 		if(strcmp(buffer, DEBIT) == 0){
@@ -261,7 +285,6 @@ void admin_panel(){
 			strcpy(new_user->username, username);
 			print("Enter the amount to be debited: ");
 			receive_integer(&amount);
-			//print_data[0] = '\0';
 			if(debit(new_user, amount) == 1)
 				print("Amount has been successfully debited to your account!\n");
 			else
@@ -279,12 +302,11 @@ void admin_panel(){
 			print_balance(new_user);
 			free(new_user);
 		}
-		//print_data[0] = '\0';
 	}while(strcmp(buffer, QUIT) != 0);
 }
 
 void police_panel(struct user* new_user){
-	char buffer[250];
+	char buffer[1000];
 	char username[250];
 	char line[255];
 	char user_from_file[250];
@@ -300,7 +322,6 @@ void police_panel(struct user* new_user){
 		print("2. STMT\n");
 		print("3. QUIT\n");
 		print("Enter the command: ");
-		//send_data(print_data);
 		receive_data(buffer);
 
 		if(strcmp(buffer, BALANCE) == 0){
@@ -359,8 +380,8 @@ void user_panel(struct user* new_user){
 		police_panel(new_user);
 }
 
-int main(){
-	char buffer[250];
+void run_server(){
+	char buffer[1000];
 	struct user * new_user;
 	do{
 		print("\n------------------------- Banking Dashboard-------------------------\n");
@@ -380,6 +401,47 @@ int main(){
 			}
 		}
 	}while(strcmp(buffer, QUIT) != 0);
-	quit_server();
+	quit_client();
+}
+
+int main(int argc, char *argv[]){
+	if(argc < 2){
+			fprintf(stderr, "Port number not provided. Program terminated\n");
+			exit(1);
+	}
+	int portno, n;
+	char buffer[255];
+
+	struct sockaddr_in serv_addr, cli_addr;
+	socklen_t clilen;
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if(sockfd < 0){
+			error("Error opening Socket.");
+	}
+	bzero((char *) &serv_addr, sizeof(serv_addr));
+	portno = atoi(argv[1]);
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	serv_addr.sin_port = htons(portno); // htons - host to network short
+
+	if(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0){
+			error("Binding Failed.");
+	}
+
+	listen(sockfd, 5); // Max No of clients that can connect to the server at a time
+	clilen = sizeof(cli_addr);
+	while(1){
+		printf("\nWaiting for new connections...\n");
+		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		if(newsockfd < 0){
+				error("Error on accept");
+		}
+		printf("Connection Established.\n");
+		printf("Starting Banking Prompt...\n");
+		run_server();
+		printf("Closing Connection\n");
+		close(newsockfd);
+	}
+	close(sockfd);
 	return 0;
 }
