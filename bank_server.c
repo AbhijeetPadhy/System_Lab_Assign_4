@@ -105,14 +105,14 @@ void mini_statement(struct user* new_user){
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
-    	printf("Error! opening file");
+    	printf("Error: User account does not exist!");
     	return;
 	}
 	int balance;
 	fscanf(fptr,"%d", &balance);
 	printf("\n\n------------------------- MINI STATEMENT -------------------------\n\n");
 	printf("\t\t|----------------------------------\n");
-	printf("\t\t|Available Balance: %d\n", balance);
+	printf("\t\t|User: %s \t Available Balance: %d\n", new_user->username, balance);
 	printf("\t\t|----------------------------------\n");
 	char type_of_transaction[250];
 	int amount;
@@ -249,7 +249,67 @@ void admin_panel(){
 }
 
 void police_panel(struct user* new_user){
+	char buffer[250];
+	char username[250];
+	char line[255];
+	char user_from_file[250];
+	char user_file_name[270] = "";
+	char type_from_file[250] = "";
+	int amount;
+	FILE *fptr;
+	do{
+		printf("\n\n-------------------------Police Panel-------------------------\n");
+		printf("Available commands\n");
+		printf("------------------\n");
+		printf("1. BAL(Show Balance of All Customers)\n");
+		printf("2. STMT\n");
+		printf("3. QUIT\n");
+		printf("Enter the command: ");
+		scanf("%s", buffer);
 
+		if(strcmp(buffer, BALANCE) == 0){
+			if ((fptr = fopen("database/login_file.txt","r")) == NULL){
+		    	printf("Error! opening file");
+		    	return;
+			}
+			while(fscanf(fptr,"%s", line) != EOF){
+				int i=0;
+				while(line[i] != ',')i++;
+				strncpy(user_from_file, line, i);
+				user_from_file[i] = '\0';
+
+				int j = i+1;
+				while(line[j] != ',')j++;
+
+				strncpy(type_from_file, line+j+1, 1);
+				type_from_file[1] = '\0';
+
+				if(type_from_file[0] != 'C')
+					continue;
+
+				FILE *fptr2;
+				user_file_name[0] = '\0';
+				strcpy(user_file_name, "database/");
+				strcat(user_file_name, user_from_file);
+				strcat(user_file_name, ".txt");
+
+				if ((fptr2 = fopen(user_file_name,"r")) == NULL){
+			    	printf("Error! opening file");
+			    	return;
+				}
+				fscanf(fptr2,"%d", &amount);
+				printf("%s : %d\n", user_from_file, amount);
+				fclose(fptr2);
+			}
+			fclose(fptr);
+		}else if(strcmp(buffer, MINI_STATEMENT) == 0){
+			printf("Enter username: ");
+			scanf("%s", username);
+			struct user* new_user = (struct user*)malloc(sizeof(struct user));
+			strcpy(new_user->username, username);
+			mini_statement(new_user);
+		}
+	}while(strcmp(buffer, QUIT) != 0);
 }
 
 void user_panel(struct user* new_user){
