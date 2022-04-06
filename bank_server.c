@@ -60,10 +60,6 @@ void receive_integer(int *data){
 	int n = read(newsockfd, buffer, 1000);
 	if(n < 0){
 			error("Error on reading.");
-	}else{
-		printf("client: %s\n", buffer);
-		int len = strlen(buffer);
-		buffer[len-1] = '\0';
 	}
 	sscanf(buffer, "%d", data);
 	print_data[0] = '\0';
