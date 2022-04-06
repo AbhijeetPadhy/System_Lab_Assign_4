@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 #define QUIT "QUIT"
 #define LOGIN "LOGIN"
@@ -24,8 +25,10 @@ struct user{
 	char type_of_user[2];
 };
 
-char print_data[1000] = "";
-int sockfd, newsockfd;
+char print_data[1000][1000];
+int sockfd, newsockfd[1000];
+int client_no = 0;
+pthread_t tid[1000];
 
 void error(const char *msg){
     printf("%s",msg);
@@ -33,36 +36,56 @@ void error(const char *msg){
 }
 
 void print(char data[1000]){
-	strcat(print_data, data);
+	int i;
+	for(i=0;i<client_no;i++){
+		if(tid[i] == pthread_self())
+			break;
+	}
+	strcat(print_data[i], data);
 }
 
 void send_data(){
-	int n = write(newsockfd, print_data, strlen(print_data));
+	int i;
+	for(i=0;i<client_no;i++){
+		if(tid[i] == pthread_self())
+			break;
+	}
+	int n = write(newsockfd[i], print_data[i], strlen(print_data[i]));
 	if(n < 0){
 			error("Error on writing.");
 	}
 }
 
 void receive_data(char buffer[1000]){
+	int i;
+	for(i=0;i<client_no;i++){
+		if(tid[i] == pthread_self())
+			break;
+	}
 	send_data();
 	bzero(buffer, 1000);
-	int n = read(newsockfd, buffer, 1000);
+	int n = read(newsockfd[i], buffer, 1000);
 	if(n < 0){
 			error("Error on reading.");
 	}
-	print_data[0] = '\0';
+	print_data[i][0] = '\0';
 }
 
 void receive_integer(int *data){
+	int i;
+	for(i=0;i<client_no;i++){
+		if(tid[i] == pthread_self())
+			break;
+	}
 	send_data();
 	char buffer[1000];
 	bzero(buffer, 1000);
-	int n = read(newsockfd, buffer, 1000);
+	int n = read(newsockfd[i], buffer, 1000);
 	if(n < 0){
 			error("Error on reading.");
 	}
 	sscanf(buffer, "%d", data);
-	print_data[0] = '\0';
+	print_data[i][0] = '\0';
 }
 
 struct user* validate(char username[250], char password[250]){
@@ -125,7 +148,12 @@ struct user * user_authenticate(){
 int quit_client(){
 	print("Bye");
 	send_data();
-	print_data[0] = '\0';
+	int i;
+	for(i=0;i<client_no;i++){
+		if(tid[i] == pthread_self())
+			break;
+	}
+	print_data[i][0] = '\0';
 	return 0;
 }
 
@@ -376,7 +404,7 @@ void user_panel(struct user* new_user){
 		police_panel(new_user);
 }
 
-void run_server(){
+void *run_server(){
 	char buffer[1000];
 	struct user * new_user;
 	do{
@@ -397,7 +425,14 @@ void run_server(){
 			}
 		}
 	}while(strcmp(buffer, QUIT) != 0);
+	printf("Closing Connection\n");
 	quit_client();
+	int i;
+	for(i=0;i<client_no;i++){
+		if(tid[i] == pthread_self())
+			break;
+	}
+	close(newsockfd[i]);
 }
 
 int main(int argc, char *argv[]){
@@ -424,19 +459,18 @@ int main(int argc, char *argv[]){
 			error("Binding Failed.");
 	}
 
-	listen(sockfd, 5); // Max No of clients that can connect to the server at a time
+	listen(sockfd, 1000); // Max No of clients that can connect to the server at a time
 	clilen = sizeof(cli_addr);
 	while(1){
 		printf("\nWaiting for new connections...\n");
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-		if(newsockfd < 0){
+		newsockfd[client_no] = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		if(newsockfd[client_no] < 0){
 				error("Error on accept");
 		}
 		printf("Connection Established.\n");
 		printf("Starting Banking Prompt...\n");
-		run_server();
-		printf("Closing Connection\n");
-		close(newsockfd);
+		pthread_create(&tid[client_no], NULL, run_server, NULL);
+		client_no++;
 	}
 	close(sockfd);
 	return 0;
