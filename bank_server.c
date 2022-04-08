@@ -142,6 +142,8 @@ struct user * user_authenticate(){
 		struct user *new_user = validate(username, password);
 		if(new_user != NULL)
 			return new_user;
+		else
+			print("Athentication Failed!\n");
 	}
 	return NULL;
 }
@@ -161,7 +163,6 @@ int quit_client(){
 void print_balance(struct user* new_user){
 	FILE *fptr;
 	char file_name[270] = "database/";
-	char print_data[1000] = "";
 	char bal_str[255];
 	char date_time[255];
 	char trans_type[255];
@@ -208,7 +209,6 @@ void print_balance(struct user* new_user){
 void mini_statement(struct user* new_user){
 	FILE *fptr;
 	char file_name[270] = "database/";
-	char print_data[1000] = "";
 	char bal_str[255];
 	char date_time[255];
 	char trans_type[255];
@@ -285,7 +285,6 @@ void customer_panel(struct user* new_user){
 int debit(struct user* new_user, int trans_amount){
 	FILE *fptr;
 	char file_name[270] = "database/";
-	char print_data[1000] = "";
 	char bal_str[255];
 	char date_time[255];
 	char trans_type[255];
@@ -342,7 +341,7 @@ void credit(struct user* new_user, int amount){
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"a")) == NULL){
-			print("Error! opening file");
+			print("Error! Could not access user's database.\n");
 			return;
 	}
 	time_t t;
@@ -356,6 +355,7 @@ void credit(struct user* new_user, int amount){
 
 	fprintf(fptr, "%s", formatted_string);
 	fclose(fptr);
+	print("Amount successfully credited!\n");
 }
 void admin_panel(){
 	char buffer[1000];
