@@ -2,6 +2,7 @@
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
+#include <time.h>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -161,14 +162,41 @@ void print_balance(struct user* new_user){
 	FILE *fptr;
 	char file_name[270] = "database/";
 	char print_data[1000] = "";
+	char bal_str[255];
+	char date_time[255];
+	char trans_type[255];
+	char line[255];
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
     	print("Error! opening file");
     	return;
 	}
-	int balance;
-	fscanf(fptr,"%d", &balance);
+	int balance = 0;
+	int amount = 0;
+	while(fgets(line,255, fptr) != NULL){
+		int i=0;
+		while(line[i] != ',')i++;
+		strncpy(date_time, line, i);
+		date_time[i] = '\0';
+
+		int j = i+1;
+		while(line[j] != ',')j++;
+		strncpy(trans_type, line+i+1, j-i-1);
+		trans_type[j-i-1] = '\0';
+
+		int k = j+1;
+		while(line[k] != ',')k++;
+		strncpy(bal_str, line+j+1, strlen(line)-j-1);
+		bal_str[strlen(line)-j-1] = '\0';
+		amount = atoi(bal_str);
+
+		if(strcmp(trans_type, DEBIT) == 0)
+			balance -= amount;
+		else
+			balance += amount;
+	}
+
 	print("----------------------------------\n");
 	char formatted_string[1000] = "";
 	sprintf(formatted_string, "Available Balance: %d\n", balance);
@@ -180,28 +208,57 @@ void print_balance(struct user* new_user){
 void mini_statement(struct user* new_user){
 	FILE *fptr;
 	char file_name[270] = "database/";
+	char print_data[1000] = "";
+	char bal_str[255];
+	char date_time[255];
+	char trans_type[255];
+	char line[255];
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
-    	print("Error: User account does not exist!");
-    	return;
+			print("Error! opening file");
+			return;
 	}
-	int balance;
-	fscanf(fptr,"%d", &balance);
+	int balance = 0;
+	int amount = 0;
 	print("\n\n------------------------- MINI STATEMENT -------------------------\n\n");
-	print("\t\t|----------------------------------\n");
+	print("\t\t|----------------------------------------------\n");
 	char formatted_string[1000] = "";
-	sprintf(formatted_string, "\t\t|User: %s \t Available Balance: %d\n", new_user->username, balance);
+	sprintf(formatted_string, "\t\t|User: %s\n", new_user->username);
 	print(formatted_string);
-	print("\t\t|----------------------------------\n");
+	print("\t\t|----------------------------------------------\n");
 	char type_of_transaction[250];
-	int amount;
-	while(fscanf(fptr,"%s", type_of_transaction) != EOF){
-		fscanf(fptr,"%d", &amount);
-		sprintf(formatted_string, "\t\t|%s:%d\n", type_of_transaction, amount);
+	while(fgets(line,255, fptr) != NULL){
+		int i=0;
+		while(line[i] != ',')i++;
+		strncpy(date_time, line, i);
+		date_time[i] = '\0';
+
+		int j = i+1;
+		while(line[j] != ',')j++;
+		strncpy(trans_type, line+i+1, j-i-1);
+		trans_type[j-i-1] = '\0';
+
+		int k = j+1;
+		while(line[k] != ',')k++;
+		strncpy(bal_str, line+j+1, strlen(line)-j-1);
+		bal_str[strlen(line)-j-1] = '\0';
+		amount = atoi(bal_str);
+
+
+		if(strcmp(trans_type, DEBIT) == 0)
+			balance -= amount;
+		else
+			balance += amount;
+
+		sprintf(formatted_string, "\t\t|%s\t%s\t%d\n", date_time, trans_type, amount);
 		print(formatted_string);
 	}
-	print("\t\t|----------------------------------\n");
+	print("\t\t|----------------------------------------------\n");
+	formatted_string[0] = '\0';
+	sprintf(formatted_string, "\t\t|Available Balance: %d\n", balance);
+	print(formatted_string);
+	print("\t\t|----------------------------------------------\n");
 	fclose(fptr);
 }
 
@@ -225,67 +282,80 @@ void customer_panel(struct user* new_user){
 	}while(strcmp(buffer, QUIT) != 0);
 }
 
-int debit(struct user* new_user, int amount){
-	FILE *fptr, *new_fptr;
+int debit(struct user* new_user, int trans_amount){
+	FILE *fptr;
 	char file_name[270] = "database/";
-	char type_of_transaction[250];
+	char print_data[1000] = "";
+	char bal_str[255];
+	char date_time[255];
+	char trans_type[255];
+	char line[255];
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
-	if ((fptr = fopen(file_name,"r")) == NULL){
+	if ((fptr = fopen(file_name,"r+")) == NULL){
     	print("Error! opening file");
     	return -1;
 	}
-	if ((new_fptr = fopen("database/temp.txt","w")) == NULL){
-    	print("Error! opening file");
-    	return -1;
+	int balance = 0;
+	int amount = 0;
+	while(fgets(line,255, fptr) != NULL){
+		int i=0;
+		while(line[i] != ',')i++;
+		strncpy(date_time, line, i);
+		date_time[i] = '\0';
+
+		int j = i+1;
+		while(line[j] != ',')j++;
+		strncpy(trans_type, line+i+1, j-i-1);
+		trans_type[j-i-1] = '\0';
+
+		int k = j+1;
+		while(line[k] != ',')k++;
+		strncpy(bal_str, line+j+1, strlen(line)-j-1);
+		bal_str[strlen(line)-j-1] = '\0';
+		amount = atoi(bal_str);
+
+		if(strcmp(trans_type, DEBIT) == 0)
+			balance -= amount;
+		else
+			balance += amount;
 	}
-	int balance;
-	fscanf(fptr,"%d", &balance);
-	if(balance < amount)
+	if(balance < trans_amount)
 		return 0;
-	fprintf(new_fptr, "%d\n", balance-amount);
-	while(fscanf(fptr,"%s", type_of_transaction) != EOF){
-		fprintf(new_fptr, "%s\n", type_of_transaction);
-		fscanf(fptr,"%d", &balance);
-		fprintf(new_fptr, "%d\n", balance);
-	}
-	fprintf(new_fptr, "%s", DEBIT);
-	fprintf(new_fptr, "\n%d", amount);
+
+	time_t t;
+  time(&t);
+	sprintf(date_time, "%s", ctime(&t));
+	date_time[strlen(date_time)-1] = '\0';
+
+	char formatted_string[500];
+	sprintf(formatted_string, "%s,%s,%d\n", date_time, "DEBIT" ,trans_amount);
+
+	fprintf(fptr, "%s", formatted_string);
 	fclose(fptr);
-	fclose(new_fptr);
-	if(rename("database/temp.txt", file_name) == 1)
-		print("rename success\n");
 	return 1;
 }
 
 void credit(struct user* new_user, int amount){
-	FILE *fptr, *new_fptr;
+	FILE *fptr;
 	char file_name[270] = "database/";
-	char type_of_transaction[250];
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
-	if ((fptr = fopen(file_name,"r")) == NULL){
-    	print("Error! opening file");
-    	return;
+	if ((fptr = fopen(file_name,"a")) == NULL){
+			print("Error! opening file");
+			return;
 	}
-	if ((new_fptr = fopen("database/temp.txt","w")) == NULL){
-    	print("Error! opening file");
-    	return;
-	}
-	int balance;
-	fscanf(fptr,"%d", &balance);
-	fprintf(new_fptr, "%d\n", balance+amount);
-	while(fscanf(fptr,"%s", type_of_transaction) != EOF){
-		fprintf(new_fptr, "%s\n", type_of_transaction);
-		fscanf(fptr,"%d", &balance);
-		fprintf(new_fptr, "%d\n", balance);
-	}
-	fprintf(new_fptr, "%s", CREDIT);
-	fprintf(new_fptr, "\n%d", amount);
+	time_t t;
+  time(&t);
+	char date_time[100];
+	sprintf(date_time, "%s", ctime(&t));
+	date_time[strlen(date_time)-1] = '\0';
+
+	char formatted_string[500];
+	sprintf(formatted_string, "%s,%s,%d\n", date_time, "CREDIT" ,amount);
+
+	fprintf(fptr, "%s", formatted_string);
 	fclose(fptr);
-	fclose(new_fptr);
-	rename("database/temp.txt", file_name);
-	return;
 }
 void admin_panel(){
 	char buffer[1000];
