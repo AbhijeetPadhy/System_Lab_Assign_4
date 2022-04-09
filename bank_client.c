@@ -25,7 +25,7 @@ int main(int argc, char *argv[]){
   struct sockaddr_in serv_addr;
   struct hostent *server;
 
-  char buffer[1000];
+  char buffer[5000];
   if(argc < 3){
     fprintf(stderr, "usage %s hostname port\n", argv[0]);
     exit(1);
@@ -47,8 +47,8 @@ int main(int argc, char *argv[]){
     error("Connection Failed!");
   }
   while(1){
-    bzero(buffer, 1000);
-    n = read(sockfd, buffer, 1000);
+    bzero(buffer, 5000);
+    n = read(sockfd, buffer, 5000);
     if(n<0)
       error("Error on reading!");
     printf("%s", buffer);
@@ -59,8 +59,8 @@ int main(int argc, char *argv[]){
       break;
     }
 
-    bzero(buffer, 1000);
-    fgets(buffer, 1000, stdin);
+    bzero(buffer, 5000);
+    fgets(buffer, 5000, stdin);
     buffer[strlen(buffer) - 1] = '\0';
     n = write(sockfd, buffer, strlen(buffer));
     if(n<0)

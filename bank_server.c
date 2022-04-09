@@ -9,13 +9,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define QUIT "QUIT"
-#define LOGIN "LOGIN"
 #define CUSTOMER "C"
 #define ADMIN "A"
 #define POLICE "P"
-#define BALANCE "BAL"
-#define MINI_STATEMENT "STMT"
 #define CREDIT "CREDIT"
 #define DEBIT "DEBIT"
 
@@ -25,7 +21,7 @@ struct user {
 	char type_of_user[2];
 };
 
-char print_data[1000] = "";
+char print_data[5000] = "";
 int sockfd, newsockfd,maxfd,ready_fd;
 int admin_active = 0;
 
@@ -281,18 +277,18 @@ void customer_panel(struct user* new_user) {
 		print("\n\n-------------------------Customer Panel-------------------------\n");
 		print("Available commands\n");
 		print("------------------\n");
-		print("1. BAL\n");
-		print("2. STMT\n");
-		print("3. QUIT\n");
-		print("Enter the command: ");
+		print("1. View Balance\n");
+		print("2. Print Mini Statement\n");
+		print("3. Log Out\n");
+		print("Enter the option number: ");
 		receive_data(buffer);
 
-		if (strcmp(buffer, BALANCE) == 0) {
+		if (strcmp(buffer, "1") == 0) {
 			print_balance(new_user);
-		}else if(strcmp(buffer, MINI_STATEMENT) == 0){
+		}else if(strcmp(buffer, "2") == 0){
 			mini_statement(new_user);
 		}
-	} while (strcmp(buffer, QUIT) != 0);
+	} while (strcmp(buffer, "3") != 0);
 }
 
 int debit(struct user* new_user, int trans_amount){
@@ -380,13 +376,13 @@ void admin_panel() {
 		print("\n\n-------------------------Admin Panel-------------------------\n");
 		print("Available commands\n");
 		print("------------------\n");
-		print("1. CREDIT\n");
-		print("2. DEBIT\n");
-		print("3. QUIT\n");
-		print("Enter the command: ");
+		print("1. Credit\n");
+		print("2. Debit\n");
+		print("3. Log Out\n");
+		print("Enter the option number: ");
 		receive_data(buffer);
 
-		if (strcmp(buffer, DEBIT) == 0) {
+		if (strcmp(buffer, "2") == 0) {
 			print("Enter username: ");
 			receive_data(username);
 			new_user = (struct user*)malloc(sizeof(struct user));
@@ -399,7 +395,7 @@ void admin_panel() {
 				print("Transaction failed due to insufficient balance\n");
 			print_balance(new_user);
 			free(new_user);
-		}else if(strcmp(buffer, CREDIT) == 0){
+		}else if(strcmp(buffer, "1") == 0){
 			print("Enter username: ");
 			receive_data(username);
 			new_user = (struct user*)malloc(sizeof(struct user));
@@ -410,7 +406,7 @@ void admin_panel() {
 			print_balance(new_user);
 			free(new_user);
 		}
-	} while (strcmp(buffer, QUIT) != 0);
+	} while (strcmp(buffer, "3") != 0);
 
 	if ((fptr = fopen("database/admin_login_temp.txt", "w")) == NULL) {
 		print("Error! opening file");
@@ -434,13 +430,13 @@ void police_panel(struct user* new_user) {
 		print("\n\n-------------------------Police Panel-------------------------\n");
 		print("Available commands\n");
 		print("------------------\n");
-		print("1. BAL(Show Balance of All Customers)\n");
-		print("2. STMT\n");
-		print("3. QUIT\n");
-		print("Enter the command: ");
+		print("1. Show Balance of All Customers\n");
+		print("2. Print Mini Statement\n");
+		print("3. Log Out\n");
+		print("Enter the option number: ");
 		receive_data(buffer);
 
-		if (strcmp(buffer, BALANCE) == 0) {
+		if (strcmp(buffer, "1") == 0) {
 			if ((fptr = fopen("database/login_file.txt", "r")) == NULL) {
 				print("Error! opening file");
 				return;
@@ -468,14 +464,14 @@ void police_panel(struct user* new_user) {
 				print(formatted_string);
 			}
 			fclose(fptr);
-		}else if(strcmp(buffer, MINI_STATEMENT) == 0){
+		}else if(strcmp(buffer, "2") == 0){
 			print("Enter username: ");
 			receive_data(username);
 			struct user* new_user = (struct user*)malloc(sizeof(struct user));
 			strcpy(new_user->username, username);
 			mini_statement(new_user);
 		}
-	} while (strcmp(buffer, QUIT) != 0);
+	} while (strcmp(buffer, "3") != 0);
 }
 
 void user_panel(struct user* new_user) {
@@ -496,10 +492,10 @@ void run_server() {
 		print("------------------\n");
 		print("1. LOGIN\n");
 		print("2. QUIT\n");
-		print("Enter the command: ");
+		print("Enter the option number: ");
 		receive_data(buffer);
 
-		if (strcmp(buffer, LOGIN) == 0) {
+		if (strcmp(buffer, "1") == 0) {
 			new_user = user_authenticate();
 			if (new_user != NULL) {
 				print("Authentication Successfull!\n");
@@ -507,7 +503,7 @@ void run_server() {
 				free(new_user);
 			}
 		}
-	} while (strcmp(buffer, QUIT) != 0);
+	} while (strcmp(buffer, "2") != 0);
 	quit_client();
 }
 
