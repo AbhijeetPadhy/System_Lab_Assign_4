@@ -51,7 +51,15 @@ void receive_data(char buffer[1000]) {
 	print_data[0] = '\0';
 }
 
-void receive_integer(int* data) {
+int no_of_digits(int num){
+	int i=0;
+	while(num>0){
+		num /= 10;
+		i++;
+	};
+	return i;
+}
+int receive_integer() {
 	send_data();
 	char buffer[1000];
 	bzero(buffer, 1000);
@@ -59,8 +67,11 @@ void receive_integer(int* data) {
 	if (n < 0) {
 		error("Error on reading.");
 	}
-	sscanf(buffer, "%d", data);
+	int num = atoi(buffer);
 	print_data[0] = '\0';
+	if(no_of_digits(num) == strlen(buffer))
+		return num;
+	return 0;
 }
 
 struct user* validate(char username[250], char password[250]) {
@@ -225,7 +236,7 @@ void mini_statement(struct user* new_user) {
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name, "r")) == NULL) {
-			print("Error! opening file");
+			print("Error! Could not access user's account.\n");
 		return;
 	}
 	int balance = 0;
@@ -292,6 +303,8 @@ void customer_panel(struct user* new_user) {
 }
 
 int debit(struct user* new_user, int trans_amount){
+	if(trans_amount <= 0)
+		return -2;
 	FILE *fptr;
 	char file_name[270] = "database/";
 	char bal_str[255];
@@ -301,7 +314,7 @@ int debit(struct user* new_user, int trans_amount){
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r+")) == NULL){
-		print("Error! opening file");
+		print("Error! Could not access user's account.\n");
 		return -1;
 	}
 	int balance = 0;
@@ -344,14 +357,21 @@ int debit(struct user* new_user, int trans_amount){
 	return 1;
 }
 
-void credit(struct user* new_user, int amount) {
+int credit(struct user* new_user, int amount) {
+	if(amount <= 0)
+		return -2;
 	FILE *fptr;
 	char file_name[270] = "database/";
 	strcat(file_name, new_user->username);
 	strcat(file_name, ".txt");
+	if ((fptr = fopen(file_name,"r")) == NULL){
+			print("Error! Could not access user's account.\n");
+		return -1;
+	}
+	fclose(fptr);
 	if ((fptr = fopen(file_name,"a")) == NULL){
-			print("Error! Could not access user's database.\n");
-		return;
+			print("Error! Could not access user's account.\n");
+		return -1;
 	}
 	time_t t;
   time(&t);
@@ -364,14 +384,25 @@ void credit(struct user* new_user, int amount) {
 
 	fprintf(fptr, "%s", formatted_string);
 	fclose(fptr);
-	print("Amount successfully credited!\n");
+	return 1;
 }
+
+void unset_admin_login_file(){
+	FILE* fptr;
+	if ((fptr = fopen("database/admin_login_temp.txt", "w")) == NULL) {
+		print("Error! opening file");
+		return;
+	}
+	fprintf(fptr, "%d", 0);
+	fclose(fptr);
+	rename("database/admin_login_temp.txt", "database/admin_login.txt");
+}
+
 void admin_panel() {
 	char buffer[1000];
 	char username[250];
 	int amount = 0;
 	struct user* new_user = NULL;
-	FILE* fptr;
 	do {
 		print("\n\n-------------------------Admin Panel-------------------------\n");
 		print("Available commands\n");
@@ -388,12 +419,16 @@ void admin_panel() {
 			new_user = (struct user*)malloc(sizeof(struct user));
 			strcpy(new_user->username, username);
 			print("Enter the amount to be debited: ");
-			receive_integer(&amount);
-			if (debit(new_user, amount) == 1)
+			amount = receive_integer();
+			int result = debit(new_user, amount);
+			if (result == 1){
 				print("Amount has been successfully debited to your account!\n");
-			else
+				print_balance(new_user);
+			}else if(result == 0){
 				print("Transaction failed due to insufficient balance\n");
-			print_balance(new_user);
+				print_balance(new_user);
+			}else if(result == -2)
+				print("Incorrect Transaction Amount. Try again!\n");
 			free(new_user);
 		}else if(strcmp(buffer, "1") == 0){
 			print("Enter username: ");
@@ -401,20 +436,18 @@ void admin_panel() {
 			new_user = (struct user*)malloc(sizeof(struct user));
 			strcpy(new_user->username, username);
 			print("Enter the amount to be credited: ");
-			receive_integer(&amount);
-			credit(new_user, amount);
-			print_balance(new_user);
+			amount = receive_integer();
+			int result = credit(new_user, amount);
+			if(result == 1){
+				print("Amount successfully credited!\n");
+				print_balance(new_user);
+			}else if(result == -2)
+				print("Incorrect Transaction Amount. Try again!\n");
 			free(new_user);
 		}
 	} while (strcmp(buffer, "3") != 0);
 
-	if ((fptr = fopen("database/admin_login_temp.txt", "w")) == NULL) {
-		print("Error! opening file");
-		return;
-	}
-	fprintf(fptr, "%d", 0);
-	fclose(fptr);
-	rename("database/admin_login_temp.txt", "database/admin_login.txt");
+	unset_admin_login_file();
 }
 
 void police_panel(struct user* new_user) {
@@ -437,6 +470,8 @@ void police_panel(struct user* new_user) {
 		receive_data(buffer);
 
 		if (strcmp(buffer, "1") == 0) {
+			print("\nAvailable Balance of all the customers:\n");
+			print("-------------------------------------------\n");
 			if ((fptr = fopen("database/login_file.txt", "r")) == NULL) {
 				print("Error! opening file");
 				return;
@@ -512,6 +547,7 @@ int main(int argc, char* argv[]) {
 		fprintf(stderr, "Port number not provided. Program terminated\n");
 		exit(1);
 	}
+	unset_admin_login_file();
 	int portno, n;
 	char buffer[255];
 	pid_t cpid;
@@ -532,7 +568,7 @@ int main(int argc, char* argv[]) {
 		error("Binding Failed.");
 	}
 
-	listen(sockfd, 5); // Max No of clients that can connect to the server at a time
+	listen(sockfd, 10); // Max No of clients that can connect to the server at a time
 
 	FD_ZERO(&req_fds);
 
