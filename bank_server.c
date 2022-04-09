@@ -160,7 +160,7 @@ int quit_client(){
 	return 0;
 }
 
-void print_balance(struct user* new_user){
+int compute_balance(struct user* new_user){
 	FILE *fptr;
 	char file_name[270] = "database/";
 	char bal_str[255];
@@ -171,7 +171,7 @@ void print_balance(struct user* new_user){
 	strcat(file_name, ".txt");
 	if ((fptr = fopen(file_name,"r")) == NULL){
     	print("Error! opening file");
-    	return;
+    	return -1;
 	}
 	int balance = 0;
 	int amount = 0;
@@ -197,13 +197,17 @@ void print_balance(struct user* new_user){
 		else
 			balance += amount;
 	}
+	fclose(fptr);
+	return balance;
+}
 
+void print_balance(struct user* new_user){
+	int balance = compute_balance(new_user);
 	print("----------------------------------\n");
 	char formatted_string[1000] = "";
 	sprintf(formatted_string, "Available Balance: %d\n", balance);
 	print(formatted_string);
 	print("----------------------------------\n");
-	fclose(fptr);
 }
 
 void mini_statement(struct user* new_user){
@@ -438,21 +442,12 @@ void police_panel(struct user* new_user){
 				if(type_from_file[0] != 'C')
 					continue;
 
-				FILE *fptr2;
-				user_file_name[0] = '\0';
-				strcpy(user_file_name, "database/");
-				strcat(user_file_name, user_from_file);
-				strcat(user_file_name, ".txt");
-
-				if ((fptr2 = fopen(user_file_name,"r")) == NULL){
-			    	print("Error! opening file");
-			    	return;
-				}
-				fscanf(fptr2,"%d", &amount);
+				struct user *new_user = (struct user *)malloc(sizeof(struct user));
+				strcpy(new_user->username, user_from_file);
+				int balance = compute_balance(new_user);
 				char formatted_string[1000] = "";
-				sprintf(formatted_string, "%s : %d\n", user_from_file, amount);
+				sprintf(formatted_string, "%s : %d\n", user_from_file, balance);
 				print(formatted_string);
-				fclose(fptr2);
 			}
 			fclose(fptr);
 		}else if(strcmp(buffer, MINI_STATEMENT) == 0){
